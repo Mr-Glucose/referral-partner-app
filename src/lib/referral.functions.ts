@@ -66,9 +66,47 @@ function classify(input: ReferralInput): ReferralResult {
   };
 }
 
+type N8nResponse = {
+  referral_id?: string;
+  processing_status?: string;
+  final_decision?: {
+    insurance_line?: string;
+    urgency?: string;
+    priority?: string;
+    route_to?: string;
+    sla_hours?: number;
+    next_action?: string;
+  };
+  message?: string;
+  error?: string;
+};
+
+function mapN8n(payload: N8nResponse, fallback: ReferralResult): ReferralResult {
+  const d = payload.final_decision ?? {};
+  const priority = (d.priority ?? "").toLowerCase();
+  return {
+    referral_id: payload.referral_id ?? fallback.referral_id,
+    insurance_line: d.insurance_line ?? fallback.insurance_line,
+    urgency: d.urgency ?? fallback.urgency,
+    priority:
+      priority === "high" || priority === "medium" || priority === "low"
+        ? (priority as ReferralResult["priority"])
+        : fallback.priority,
+    route_to: d.route_to ?? fallback.route_to,
+    sla_hours: typeof d.sla_hours === "number" ? d.sla_hours : fallback.sla_hours,
+    next_action: d.next_action ?? fallback.next_action,
+    processing_status:
+      payload.processing_status === "manual_review_required"
+        ? "manual_review_required"
+        : payload.processing_status === "ready"
+          ? "ready"
+          : fallback.processing_status,
+  };
+}
+
 /**
- * Isolated backend integration point. Swap the body for a call to the n8n
- * webhook (or a Cloud edge function) — the webhook URL stays server-side only.
+ * Server-side referral proxy. Validates the payload, then forwards it to the
+ * n8n workflow. The webhook URL stays server-side only (N8N_WEBHOOK_URL).
  */
 export const submitReferral = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => data)
@@ -90,19 +128,19 @@ export const submitReferral = createServerFn({ method: "POST" })
 
     const input = parsed.data;
 
-    if (!/^[A-Za-z]{2,}-?\d{3,}$/.test(input.partner_code.replace(/\s/g, ""))) {
-      return {
-        ok: false,
-        kind: "validation",
-        message: "We couldn't recognise that partner code.",
-        fieldErrors: {
-          partner_code: "Use the code from your partner agreement, e.g. AST-48210",
-        },
-      };
-    }
+    const webhookUrl = process.env["N8N_WEBHOOK_URL"] ?? process.env["N8N_REFERRAL_WEBHOOK_URL"];
 
-    const webhookUrl = process.env["N8N_REFERRAL_WEBHOOK_URL"];
     if (!webhookUrl) {
+      if (!/^[A-Za-z]{2,}-?\d{3,}$/.test(input.partner_code.replace(/\s/g, ""))) {
+        return {
+          ok: false,
+          kind: "validation",
+          message: "We couldn't recognise that partner code.",
+          fieldErrors: {
+            partner_code: "Use the code from your partner agreement, e.g. AST-48210",
+          },
+        };
+      }
       return { ok: true, data: classify(input) };
     }
 
@@ -110,16 +148,43 @@ export const submitReferral = createServerFn({ method: "POST" })
       const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({
+          partner_code: input.partner_code,
+          prospect_name: input.prospect_name,
+          prospect_email: input.prospect_email,
+          intent: input.insurance_intent,
+          referral_notes: input.referral_notes,
+        }),
       });
+
+      const text = await res.text();
+      let payload: N8nResponse = {};
+      try {
+        payload = text ? (JSON.parse(text) as N8nResponse) : {};
+      } catch {
+        payload = {};
+      }
+
       if (!res.ok) {
+        const friendly = payload.message ?? payload.error;
+        if (res.status >= 400 && res.status < 500) {
+          return {
+            ok: false,
+            kind: "validation",
+            message: friendly ?? "The routing service couldn't accept this referral. Check the details and try again.",
+            ...(res.status === 401 || res.status === 403
+              ? { fieldErrors: { partner_code: "This partner code wasn't accepted." } }
+              : {}),
+          };
+        }
         return {
           ok: false,
           kind: "connection",
-          message: "The routing service didn't respond as expected. Nothing was lost.",
+          message: friendly ?? "The routing service didn't respond as expected. Nothing was lost.",
         };
       }
-      return { ok: true, data: (await res.json()) as ReferralResult };
+
+      return { ok: true, data: mapN8n(payload, classify(input)) };
     } catch {
       return {
         ok: false,
