@@ -63,13 +63,13 @@ function ReferralPage() {
 
   function localValidate(): Record<string, string> {
     const errs: Record<string, string> = {};
-    if (!form.partner_code.trim()) errs.partner_code = "Partner code is required";
-    if (!form.prospect_name.trim()) errs.prospect_name = "Prospect name is required";
-    if (!form.prospect_email.trim()) errs.prospect_email = "Prospect email is required";
+    if (!form.partner_code.trim()) errs['partner_code'] = "Partner code is required";
+    if (!form.prospect_name.trim()) errs['prospect_name'] = "Prospect name is required";
+    if (!form.prospect_email.trim()) errs['prospect_email'] = "Prospect email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.prospect_email.trim()))
-      errs.prospect_email = "Enter a valid email address";
+      errs['prospect_email'] = "Enter a valid email address";
     if (!form.insurance_intent.trim())
-      errs.insurance_intent = "Tell us what coverage they're after";
+      errs['insurance_intent'] = "Tell us what coverage they're after";
     return errs;
   }
 
@@ -159,7 +159,7 @@ function ReferralPage() {
                     value={form.partner_code}
                     onChange={set("partner_code")}
                     placeholder="AST-48210"
-                    error={fieldErrors.partner_code}
+                    error={fieldErrors['partner_code']}
                   />
                   <Field
                     id="prospect_name"
@@ -167,7 +167,7 @@ function ReferralPage() {
                     value={form.prospect_name}
                     onChange={set("prospect_name")}
                     placeholder="Nadia Okafor"
-                    error={fieldErrors.prospect_name}
+                    error={fieldErrors['prospect_name']}
                   />
                   <Field
                     id="prospect_email"
@@ -176,7 +176,7 @@ function ReferralPage() {
                     value={form.prospect_email}
                     onChange={set("prospect_email")}
                     placeholder="nadia.okafor@brightline.co"
-                    error={fieldErrors.prospect_email}
+                    error={fieldErrors['prospect_email']}
                   />
                   <Field
                     id="insurance_intent"
@@ -184,7 +184,7 @@ function ReferralPage() {
                     value={form.insurance_intent}
                     onChange={set("insurance_intent")}
                     placeholder="e.g. auto insurance, life insurance"
-                    error={fieldErrors.insurance_intent}
+                    error={fieldErrors['insurance_intent']}
                   />
                   <div>
                     <label htmlFor="referral_notes" className="text-[12px] font-semibold text-ink">
@@ -270,8 +270,8 @@ function Field({
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
-  error?: string;
-  type?: string;
+  error?: string | undefined;
+  type?: string | undefined;
 }) {
   return (
     <div>
