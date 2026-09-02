@@ -1,24 +1,55 @@
-# Pixel Perfect
+# Referral Partner App
 
-Implement exactly the screenshot and nothing else
+This is the referral workflow I’ve been building throughout the Gayiti fellowship, starting from a simple intake automation and gradually turning it into a real app.
 
-This project was built with [Lovable](https://lovable.dev).
+The idea is simple: a referral partner submits a prospect, the system processes the referral, and an AI agent team helps determine what kind of referral it is, how urgent it is, where it should go, and what should happen next.
 
-## Build with Lovable
+I wanted the final version to be something a nontechnical person could actually use, not just an n8n workflow running in the background.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a582979c-8488-44dc-b967-f4d8c92a48a7).
+## How It Works
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+A partner submits:
 
-## Development
+- Partner code
+- Prospect name
+- Prospect email
+- Insurance intent
+- Optional referral notes
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+The frontend sends the referral through a Supabase Edge Function, which securely forwards it to my n8n workflow.
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+Inside n8n, four AI agents handle different parts of the referral:
+
+- **Classifier** — identifies the insurance line and urgency
+- **Extractor** — pulls out facts that were actually provided
+- **Reasoner** — determines priority, routing, SLA, and the next action
+- **Composer** — prepares the sales summary and partner/prospect communication
+
+Each agent output is validated before the workflow continues.
+
+The results are then combined into one final response and sent back to the app.
+
+The app shows whether the referral:
+
+- Is ready to move forward
+- Needs human review
+- Could not be submitted
+
+## Tech Stack
+
+- Lovable
+- React / TypeScript
+- Supabase Edge Functions
+- n8n
+- Claude
+- HubSpot
+- Gmail
+- Google Sheets
+
+## Running Locally
+
+Install the dependencies:
+
+```bash
+npm install
 npm run dev
-```
