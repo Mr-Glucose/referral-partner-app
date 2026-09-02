@@ -66,9 +66,47 @@ function classify(input: ReferralInput): ReferralResult {
   };
 }
 
+type N8nResponse = {
+  referral_id?: string;
+  processing_status?: string;
+  final_decision?: {
+    insurance_line?: string;
+    urgency?: string;
+    priority?: string;
+    route_to?: string;
+    sla_hours?: number;
+    next_action?: string;
+  };
+  message?: string;
+  error?: string;
+};
+
+function mapN8n(payload: N8nResponse, fallback: ReferralResult): ReferralResult {
+  const d = payload.final_decision ?? {};
+  const priority = (d.priority ?? "").toLowerCase();
+  return {
+    referral_id: payload.referral_id ?? fallback.referral_id,
+    insurance_line: d.insurance_line ?? fallback.insurance_line,
+    urgency: d.urgency ?? fallback.urgency,
+    priority:
+      priority === "high" || priority === "medium" || priority === "low"
+        ? (priority as ReferralResult["priority"])
+        : fallback.priority,
+    route_to: d.route_to ?? fallback.route_to,
+    sla_hours: typeof d.sla_hours === "number" ? d.sla_hours : fallback.sla_hours,
+    next_action: d.next_action ?? fallback.next_action,
+    processing_status:
+      payload.processing_status === "manual_review_required"
+        ? "manual_review_required"
+        : payload.processing_status === "ready"
+          ? "ready"
+          : fallback.processing_status,
+  };
+}
+
 /**
- * Isolated backend integration point. Swap the body for a call to the n8n
- * webhook (or a Cloud edge function) — the webhook URL stays server-side only.
+ * Server-side referral proxy. Validates the payload, then forwards it to the
+ * n8n workflow. The webhook URL stays server-side only (N8N_WEBHOOK_URL).
  */
 export const submitReferral = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => data)
