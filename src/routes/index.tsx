@@ -48,11 +48,29 @@ const priorityStyles: Record<ReferralResult["priority"], string> = {
   low: "bg-mint-soft text-mint",
 };
 
+function humanize(value: string): string {
+  const map: Record<string, string> = {
+    personal_lines: "Personal Lines",
+    commercial_lines: "Commercial Lines",
+    general_review: "General Review",
+    life_team: "Life Team",
+    health_team: "Health Team",
+  };
+  const normalized = value.trim().toLowerCase();
+  if (map[normalized]) return map[normalized];
+  return value
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""))
+    .join(" ");
+}
+
 function ReferralPage() {
   const submit = useServerFn(submitReferral);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ReferralResult | null>(null);
+  const [step, setStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<{ kind: "validation" | "connection"; message: string } | null>(
     null,
@@ -84,19 +102,23 @@ function ReferralPage() {
     setFieldErrors({});
     setError(null);
     setLoading(true);
+    setStep(2);
     try {
       const res = await submit({ data: form });
       if (res.ok) {
         setResult(res.data);
+        setStep(3);
       } else {
         setFieldErrors(res.fieldErrors ?? {});
         setError({ kind: res.kind, message: res.message });
+        setStep(1);
       }
     } catch {
       setError({
         kind: "connection",
         message: "We couldn't reach the routing service. Your details are still here — try again.",
       });
+      setStep(1);
     } finally {
       setLoading(false);
     }
@@ -104,6 +126,7 @@ function ReferralPage() {
 
   function reset() {
     setResult(null);
+    setStep(1);
     setError(null);
     setFieldErrors({});
   }
@@ -120,18 +143,14 @@ function ReferralPage() {
             <p className="text-[11px] font-medium text-soft">Partner routing console</p>
           </div>
           <span className="ml-auto rounded-full bg-mint-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-mint">
-            Connected
+            System Online
           </span>
         </header>
 
         <div className="mt-6 mb-4 flex gap-1.5">
-          <div className="h-1.5 flex-1 rounded-full bg-brand" />
-          <div className={`h-1.5 flex-1 rounded-full ${result ? "bg-brand" : "bg-black/10"}`} />
-          <div
-            className={`h-1.5 flex-1 rounded-full ${
-              result?.processing_status === "ready" ? "bg-brand" : "bg-black/10"
-            }`}
-          />
+          <div className={`h-1.5 flex-1 rounded-full ${step >= 1 ? "bg-brand" : "bg-black/10"}`} />
+          <div className={`h-1.5 flex-1 rounded-full ${step >= 2 ? "bg-brand" : "bg-black/10"}`} />
+          <div className={`h-1.5 flex-1 rounded-full ${step >= 3 ? "bg-brand" : "bg-black/10"}`} />
         </div>
 
         <div className="flex-1">
@@ -158,7 +177,7 @@ function ReferralPage() {
                     label="Partner code"
                     value={form.partner_code}
                     onChange={set("partner_code")}
-                    placeholder="AST-48210"
+                    placeholder="e.g. PARTNER001"
                     error={fieldErrors['partner_code']}
                   />
                   <Field
@@ -247,9 +266,9 @@ function ReferralPage() {
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-1.5">
-          <span className={`size-2 rounded-full ${result ? "bg-black/15" : "bg-brand"}`} />
-          <span className={`size-2 rounded-full ${result ? "bg-brand" : "bg-black/15"}`} />
-          <span className="size-2 rounded-full bg-black/15" />
+          <span className={`size-2 rounded-full ${step === 1 ? "bg-brand" : "bg-black/15"}`} />
+          <span className={`size-2 rounded-full ${step === 2 ? "bg-brand" : "bg-black/15"}`} />
+          <span className={`size-2 rounded-full ${step === 3 ? "bg-brand" : "bg-black/15"}`} />
         </div>
       </div>
     </main>
@@ -306,7 +325,7 @@ function ResultCard({ result, onReset }: { result: ReferralResult; onReset: () =
           <span
             className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${priorityStyles[result.priority]}`}
           >
-            {result.priority} priority
+            {humanize(result.priority)} priority
           </span>
         </div>
 
@@ -318,15 +337,15 @@ function ResultCard({ result, onReset }: { result: ReferralResult; onReset: () =
           </p>
           <p className="mt-1 text-[12px] font-medium text-ink/80">
             {ready
-              ? "This referral has been assigned and the team has been notified."
-              : "We've received the referral, but a member of our team needs to look at it before it moves forward. Nothing more is needed from you right now."}
+              ? "This referral was processed and routed successfully."
+              : "This referral needs a team member to review the details before it moves forward. No additional action is needed from you right now."}
           </p>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-3">
-          <Cell label="Insurance line" value={result.insurance_line} />
-          <Cell label="Urgency" value={result.urgency} />
-          <Cell label="Route to" value={result.route_to} />
+          <Cell label="Insurance line" value={humanize(result.insurance_line)} />
+          <Cell label="Urgency" value={humanize(result.urgency)} />
+          <Cell label="Route to" value={humanize(result.route_to)} />
           <Cell label="Response SLA" value={`${result.sla_hours} hours`} />
         </dl>
 
@@ -334,9 +353,6 @@ function ResultCard({ result, onReset }: { result: ReferralResult; onReset: () =
           <dt className="text-[11px] font-bold uppercase tracking-wider text-soft">Next action</dt>
           <dd className="mt-1 text-[14px] font-semibold text-ink">{result.next_action}</dd>
         </div>
-        <p className="mt-3 text-[11px] font-medium text-soft">
-          Processing status: {result.processing_status}
-        </p>
       </div>
 
       <button
