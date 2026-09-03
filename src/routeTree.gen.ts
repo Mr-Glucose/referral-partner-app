@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicSubmitReferralRouteImport } from './routes/api/public/submit-referral'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSubmitReferralRoute = ApiPublicSubmitReferralRouteImport.update({
+  id: '/api/public/submit-referral',
+  path: '/api/public/submit-referral',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/public/submit-referral'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/public/submit-referral'
+  id: '__root__' | '/' | '/api/public/submit-referral'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicSubmitReferralRoute: typeof ApiPublicSubmitReferralRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/submit-referral': {
+      id: '/api/public/submit-referral'
+      path: '/api/public/submit-referral'
+      fullPath: '/api/public/submit-referral'
+      preLoaderRoute: typeof ApiPublicSubmitReferralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicSubmitReferralRoute: ApiPublicSubmitReferralRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
