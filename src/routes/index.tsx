@@ -66,7 +66,7 @@ function humanize(value: string): string {
 }
 
 function ReferralPage() {
-  const submit = useServerFn(submitReferral);
+  const [form, setForm] = useState<FormState>(EMPTY);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ReferralResult | null>(null);
