@@ -16,7 +16,9 @@ A partner submits:
 - Insurance intent
 - Optional referral notes
 
-The frontend sends the referral through a Supabase Edge Function, which securely forwards it to my n8n workflow.
+The frontend sends the referral to a server-side API endpoint.
+
+That backend endpoint securely forwards the referral to my n8n workflow. The n8n webhook URL stays on the server and is never exposed to the browser.
 
 Inside n8n, four AI agents handle different parts of the referral:
 
@@ -27,7 +29,7 @@ Inside n8n, four AI agents handle different parts of the referral:
 
 Each agent output is validated before the workflow continues.
 
-The results are then combined into one final response and sent back to the app.
+The results are combined into one final response, returned through the backend, and displayed in the app.
 
 The app shows whether the referral:
 
@@ -39,7 +41,7 @@ The app shows whether the referral:
 
 - Lovable
 - React / TypeScript
-- Supabase Edge Functions
+- Server-side API endpoint
 - n8n
 - Claude
 - HubSpot
