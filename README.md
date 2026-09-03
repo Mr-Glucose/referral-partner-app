@@ -419,7 +419,7 @@ It maps the backend response into the information the referral partner actually 
 
 ### Mobile Experience
 
-![Astoria Mobile View](./docs/screenshots/mobile-view.jpeg)
+![Astoria Mobile View](./docs/screenshots/mobile-view.jpg)
 
 *The same referral experience running on a mobile device.*
 
