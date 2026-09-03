@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState, type FormEvent } from "react";
 import {
   submitReferral,
   type ReferralInput,
   type ReferralResult,
 } from "@/lib/referral.functions";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,8 +66,8 @@ function humanize(value: string): string {
 }
 
 function ReferralPage() {
-  const submit = useServerFn(submitReferral);
   const [form, setForm] = useState<FormState>(EMPTY);
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ReferralResult | null>(null);
   const [step, setStep] = useState(1);
@@ -104,7 +104,7 @@ function ReferralPage() {
     setLoading(true);
     setStep(2);
     try {
-      const res = await submit({ data: form });
+      const res = await submitReferral(form);
       if (res.ok) {
         setResult(res.data);
         setStep(3);
