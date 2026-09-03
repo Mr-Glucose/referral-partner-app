@@ -38,7 +38,7 @@ describe("submitReferral", () => {
 
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.kind).toBe("validation");
-    expect(res.ok === false && res.fieldErrors?.partner_code).toBe(
+    expect(res.ok === false && res.fieldErrors?.["partner_code"]).toBe(
       "Partner code is required",
     );
     expect(fetchMock).not.toHaveBeenCalled();
@@ -49,7 +49,7 @@ describe("submitReferral", () => {
 
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.kind).toBe("validation");
-    expect(res.ok === false && res.fieldErrors?.prospect_email).toBe(
+    expect(res.ok === false && res.fieldErrors?.["prospect_email"]).toBe(
       "Enter a valid email address",
     );
   });
