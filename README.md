@@ -618,7 +618,7 @@ referral-partner-app/
     │   ├── referral-success.png
     │   ├── manual-review.png
     │   ├── invalid-partner.png
-    │   └── mobile-view.png
+    │   └── mobile-view.jpg
     │
     └── TECHNICAL_HANDOFF.md
 ```
