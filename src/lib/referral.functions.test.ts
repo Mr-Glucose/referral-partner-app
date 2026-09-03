@@ -9,21 +9,24 @@ const baseInput: ReferralInput = {
   referral_notes: "",
 };
 
+let fetchMock: ReturnType<typeof vi.fn>;
+
 function mockFetch(response: Response) {
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(response));
+  fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(response));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 function mockFetchRejected(error: Error) {
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.reject(error));
+  fetchMock = vi.fn<typeof fetch>(() => Promise.reject(error));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 describe("submitReferral", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
@@ -38,7 +41,7 @@ describe("submitReferral", () => {
     expect(res.ok === false && res.fieldErrors?.partner_code).toBe(
       "Partner code is required",
     );
-    expect(vi.fn()).not.toHaveBeenCalled(); // fetch is not called for validation failures
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fails validation when prospect_email is invalid and reports the prospect_email field", async () => {
