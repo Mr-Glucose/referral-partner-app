@@ -58,15 +58,35 @@ export type CaptureResult = {
 };
 
 /**
+ * Safe operational context that may be attached to an error event.
+ * Only non-PII operational fields are allowed here.
+ */
+export type SafeErrorContext = {
+  request_id?: string;
+  referral_id?: string;
+  processing_status?: string;
+  http_status?: number;
+  duration_ms?: number;
+  fallback_count?: number;
+  error_type?: string;
+};
+
+/**
  * Capture an unexpected server/upstream failure. Never throws: telemetry
  * problems must not affect the referral API.
  */
-export async function captureServerException(error: unknown): Promise<string | undefined> {
-  const result = await captureServerExceptionDetailed(error);
+export async function captureServerException(
+  error: unknown,
+  context?: SafeErrorContext
+): Promise<string | undefined> {
+  const result = await captureServerExceptionDetailed(error, context);
   return result.eventId;
 }
 
-export async function captureServerExceptionDetailed(error: unknown): Promise<CaptureResult> {
+export async function captureServerExceptionDetailed(
+  error: unknown,
+  context?: SafeErrorContext
+): Promise<CaptureResult> {
   try {
     const dsn = process.env["SENTRY_DSN"];
     if (!dsn) {
@@ -83,6 +103,18 @@ export async function captureServerExceptionDetailed(error: unknown): Promise<Ca
     const sentAt = new Date().toISOString();
     const { type, value } = errorShape(error);
 
+    const tags: Record<string, string> = { runtime: "edge", surface: "server" };
+    const extra: Record<string, unknown> = {};
+    if (context) {
+      for (const [key, value] of Object.entries(context)) {
+        if (value === undefined) continue;
+        extra[key] = value;
+        if (typeof value === "string" || typeof value === "number") {
+          tags[key] = String(value);
+        }
+      }
+    }
+
     const event = {
       event_id: eventId,
       timestamp: Date.now() / 1000,
@@ -90,7 +122,8 @@ export async function captureServerExceptionDetailed(error: unknown): Promise<Ca
       level: "error",
       environment: process.env["NODE_ENV"] ?? "production",
       server_name: undefined,
-      tags: { runtime: "edge", surface: "server" },
+      tags,
+      extra,
       exception: { values: [{ type, value }] },
     };
 
