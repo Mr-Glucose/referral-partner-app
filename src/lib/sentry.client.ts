@@ -9,11 +9,11 @@
 // - The DSN comes from VITE_SENTRY_DSN; if it is unset, Sentry stays off.
 
 import * as Sentry from "@sentry/tanstackstart-react";
-import type { Router } from "@tanstack/react-router";
+import type { AnyRouter } from "@tanstack/react-router";
 
 let initialized = false;
 
-export function initSentry(router: Router<never, never, never>): void {
+export function initSentry(router: AnyRouter): void {
   if (initialized) return;
   if (typeof window === "undefined") return;
 
