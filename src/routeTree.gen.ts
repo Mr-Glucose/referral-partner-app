@@ -10,17 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiPublicSentryTestRouteImport } from './routes/api/public/sentry-test'
 import { Route as ApiPublicSubmitReferralRouteImport } from './routes/api/public/submit-referral'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSentryTestRoute = ApiPublicSentryTestRouteImport.update({
-  id: '/api/public/sentry-test',
-  path: '/api/public/sentry-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSubmitReferralRoute = ApiPublicSubmitReferralRouteImport.update({
@@ -31,32 +25,27 @@ const ApiPublicSubmitReferralRoute = ApiPublicSubmitReferralRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/public/sentry-test': typeof ApiPublicSentryTestRoute
   '/api/public/submit-referral': typeof ApiPublicSubmitReferralRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/sentry-test' | '/api/public/submit-referral'
+  fullPaths: '/' | '/api/public/submit-referral'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/sentry-test' | '/api/public/submit-referral'
-  id:
-    '__root__' | '/' | '/api/public/sentry-test' | '/api/public/submit-referral'
+  to: '/' | '/api/public/submit-referral'
+  id: '__root__' | '/' | '/api/public/submit-referral'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiPublicSentryTestRoute: typeof ApiPublicSentryTestRoute
   ApiPublicSubmitReferralRoute: typeof ApiPublicSubmitReferralRoute
 }
 
@@ -67,13 +56,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/sentry-test': {
-      id: '/api/public/sentry-test'
-      path: '/api/public/sentry-test'
-      fullPath: '/api/public/sentry-test'
-      preLoaderRoute: typeof ApiPublicSentryTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/submit-referral': {
@@ -88,7 +70,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiPublicSentryTestRoute: ApiPublicSentryTestRoute,
   ApiPublicSubmitReferralRoute: ApiPublicSubmitReferralRoute,
 }
 export const routeTree = rootRouteImport
