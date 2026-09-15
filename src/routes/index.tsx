@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   submitReferral,
   type ReferralInput,
   type ReferralResult,
 } from "@/lib/referral.functions";
+import { sendSentryVerificationError } from "@/lib/sentry";
 
 
 export const Route = createFileRoute("/")({
