@@ -18,6 +18,8 @@ export const Route = createFileRoute("/api/public/submit-referral")({
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
+        const { captureServerException } = await import("@/lib/sentry.server");
+
         let body: Record<string, unknown>;
         try {
           body = (await request.json()) as Record<string, unknown>;
@@ -53,6 +55,7 @@ export const Route = createFileRoute("/api/public/submit-referral")({
         const webhookUrl = process.env["N8N_WEBHOOK_URL"];
         if (!webhookUrl) {
           console.error("N8N_WEBHOOK_URL is not configured");
+          captureServerException(new Error("N8N_WEBHOOK_URL is not configured"));
           return json(
             { message: "The routing service isn't configured yet. Please try again later." },
             500,
@@ -72,8 +75,9 @@ export const Route = createFileRoute("/api/public/submit-referral")({
               referral_notes,
             }),
           });
-        } catch (err) {
-          console.error("Failed to reach n8n webhook", err);
+        } catch {
+          console.error("Failed to reach n8n webhook");
+          captureServerException(new Error("Failed to reach n8n webhook"));
           return json(
             {
               message:
@@ -99,10 +103,14 @@ export const Route = createFileRoute("/api/public/submit-referral")({
             (res.status >= 500
               ? "The routing service didn't respond as expected. Nothing was lost."
               : "The routing service couldn't accept this referral. Check the details and try again.");
+          if (res.status >= 500) {
+            captureServerException(new Error(`n8n returned HTTP ${res.status}`));
+          }
           return json({ ...upstream, message }, res.status >= 500 ? 502 : res.status);
         }
 
         if (payload === null) {
+          captureServerException(new Error("n8n returned empty or non-JSON success response"));
           return json(
             { message: "The routing service didn't respond as expected. Nothing was lost." },
             502,
@@ -111,6 +119,7 @@ export const Route = createFileRoute("/api/public/submit-referral")({
 
         return json(payload, 200);
       },
+
     },
   },
 });
