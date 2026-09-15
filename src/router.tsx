@@ -13,5 +13,9 @@ export const getRouter = () => {
     defaultPreloadStaleTime: 0,
   });
 
+  // Browser-only: initializes Sentry with router tracing. No-ops during SSR
+  // and when VITE_SENTRY_DSN is unset.
+  initSentry(router);
+
   return router;
 };
