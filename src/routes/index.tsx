@@ -76,6 +76,11 @@ function ReferralPage() {
   const [error, setError] = useState<{ kind: "validation" | "connection"; message: string } | null>(
     null,
   );
+  const [showSentryTest, setShowSentryTest] = useState(false);
+
+  useEffect(() => {
+    setShowSentryTest(new URLSearchParams(window.location.search).get("sentry_test") === "1");
+  }, []);
 
   const set = (key: keyof FormState) => (value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
