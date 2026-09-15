@@ -8,7 +8,8 @@ export const Route = createFileRoute("/api/public/sentry-test")({
       GET: async () => {
         const { captureServerException } = await import("@/lib/sentry.server");
 
-        captureServerException(
+        // Await so the serverless isolate cannot freeze before Sentry flushes.
+        await captureServerException(
           new Error("Astoria Server Sentry Verification Error")
         );
 

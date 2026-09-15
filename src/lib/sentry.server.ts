@@ -14,18 +14,32 @@ import * as Sentry from "@sentry/tanstackstart-react";
 
 let initialized = false;
 
-function initServerSentry(): void {
-  if (initialized) return;
+function initServerSentry(): boolean {
+  if (initialized) return true;
+  // Presence check only — never log the DSN value itself.
   const dsn = process.env["SENTRY_DSN"];
-  if (!dsn) return;
+  if (!dsn) {
+    console.warn("[sentry] SENTRY_DSN not present at runtime; server Sentry disabled");
+    return false;
+  }
   initialized = true;
   Sentry.init({
     dsn,
     sendDefaultPii: false,
   });
+  return true;
 }
 
-export function captureServerException(error: unknown): void {
-  initServerSentry();
-  Sentry.captureException(error);
+// Serverless runtimes freeze the isolate as soon as the response is returned,
+// which silently drops queued Sentry events. Always await flush before the
+// route returns so events are actually delivered.
+export async function captureServerException(error: unknown): Promise<string | undefined> {
+  const active = initServerSentry();
+  if (!active) return undefined;
+  const eventId = Sentry.captureException(error);
+  const flushed = await Sentry.flush(2000);
+  console.log(
+    `[sentry] capture: eventId=${eventId ?? "none"} flushed=${flushed}`
+  );
+  return eventId;
 }
