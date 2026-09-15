@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { logReferralEvent } from "@/lib/logger.server";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,13 @@ export const Route = createFileRoute("/api/public/submit-referral")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
         const { captureServerException } = await import("@/lib/sentry.server");
+
+        const requestId = crypto.randomUUID();
+        const startedAt = Date.now();
+        const durationMs = () => Date.now() - startedAt;
+        const fallbackCount = 0;
+
+        logReferralEvent("referral.received", { request_id: requestId });
 
         let body: Record<string, unknown>;
         try {
@@ -55,7 +63,19 @@ export const Route = createFileRoute("/api/public/submit-referral")({
         const webhookUrl = process.env["N8N_WEBHOOK_URL"];
         if (!webhookUrl) {
           console.error("N8N_WEBHOOK_URL is not configured");
-          await captureServerException(new Error("N8N_WEBHOOK_URL is not configured"));
+          logReferralEvent("referral.upstream_failure", {
+            request_id: requestId,
+            http_status: 500,
+            duration_ms: durationMs(),
+            fallback_count: fallbackCount,
+            error_type: "config_missing",
+          });
+          await captureServerException(new Error("N8N_WEBHOOK_URL is not configured"), {
+            request_id: requestId,
+            http_status: 500,
+            duration_ms: durationMs(),
+            error_type: "config_missing",
+          });
           return json(
             { message: "The routing service isn't configured yet. Please try again later." },
             500,
@@ -77,7 +97,19 @@ export const Route = createFileRoute("/api/public/submit-referral")({
           });
         } catch {
           console.error("Failed to reach n8n webhook");
-          await captureServerException(new Error("Failed to reach n8n webhook"));
+          logReferralEvent("referral.connection_failure", {
+            request_id: requestId,
+            http_status: 502,
+            duration_ms: durationMs(),
+            fallback_count: fallbackCount,
+            error_type: "network_error",
+          });
+          await captureServerException(new Error("Failed to reach n8n webhook"), {
+            request_id: requestId,
+            http_status: 502,
+            duration_ms: durationMs(),
+            error_type: "network_error",
+          });
           return json(
             {
               message:
@@ -104,17 +136,68 @@ export const Route = createFileRoute("/api/public/submit-referral")({
               ? "The routing service didn't respond as expected. Nothing was lost."
               : "The routing service couldn't accept this referral. Check the details and try again.");
           if (res.status >= 500) {
-            await captureServerException(new Error(`n8n returned HTTP ${res.status}`));
+            logReferralEvent("referral.upstream_failure", {
+              request_id: requestId,
+              http_status: 502,
+              duration_ms: durationMs(),
+              fallback_count: fallbackCount,
+              error_type: `upstream_http_${res.status}`,
+            });
+            await captureServerException(new Error(`n8n returned HTTP ${res.status}`), {
+              request_id: requestId,
+              http_status: 502,
+              duration_ms: durationMs(),
+              error_type: `upstream_http_${res.status}`,
+            });
           }
           return json({ ...upstream, message }, res.status >= 500 ? 502 : res.status);
         }
 
         if (payload === null) {
-          await captureServerException(new Error("n8n returned empty or non-JSON success response"));
+          logReferralEvent("referral.upstream_failure", {
+            request_id: requestId,
+            http_status: 502,
+            duration_ms: durationMs(),
+            fallback_count: fallbackCount,
+            error_type: "bad_upstream_response",
+          });
+          await captureServerException(new Error("n8n returned empty or non-JSON success response"), {
+            request_id: requestId,
+            http_status: 502,
+            duration_ms: durationMs(),
+            error_type: "bad_upstream_response",
+          });
           return json(
             { message: "The routing service didn't respond as expected. Nothing was lost." },
             502,
           );
+        }
+
+        const referralId =
+          typeof payload["referral_id"] === "string" ? payload["referral_id"] : undefined;
+        const processingStatus =
+          typeof payload["processing_status"] === "string"
+            ? payload["processing_status"]
+            : undefined;
+
+        if (processingStatus === "manual_review_required") {
+          logReferralEvent("referral.manual_review", {
+            request_id: requestId,
+            referral_id: referralId,
+            processing_status: processingStatus,
+            http_status: 200,
+            duration_ms: durationMs(),
+            fallback_count: fallbackCount,
+          });
+        } else {
+          logReferralEvent("referral.completed", {
+            request_id: requestId,
+            referral_id: referralId,
+            processing_status: processingStatus,
+            http_status: 200,
+            duration_ms: durationMs(),
+            fallback_count: fallbackCount,
+          });
         }
 
         return json(payload, 200);
