@@ -1,6 +1,8 @@
 # Astoria Referrals
 
-**Turning a referral intake workflow into a usable AI-powered triage system**
+**Every referral should end with a clear next action.**
+
+*A live referral intake, AI triage, routing, CRM, communication, and observability prototype built through the Gayiti Fellowship.*
 
 [![Live App](https://img.shields.io/badge/Live-Astoria%20Referrals-2bbbad.svg)](https://astoria-referrals.lovable.app)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
@@ -24,10 +26,11 @@
 11. [Running Locally](#-running-locally)
 12. [Project Structure](#-project-structure)
 13. [Security](#-security)
-14. [Known Limitations](#️-known-limitations)
-15. [Next Steps](#-next-steps)
-16. [What I Learned](#-what-i-learned)
-17. [About This Project](#-about-this-project)
+14. [Observability](#observability)
+15. [Known Limitations](#️-known-limitations)
+16. [Next Steps](#-next-steps)
+17. [What I Learned](#-what-i-learned)
+18. [About This Project](#-about-this-project)
 
 ---
 
@@ -35,9 +38,9 @@
 
 This project started much smaller than the app you see today.
 
-In Module 1 of the Gayiti fellowship, I built a basic n8n workflow that accepted a referral, validated the information, logged it, and sent emails.
+In Module 1 of the Gayiti Fellowship, I built a basic n8n workflow that accepted a referral, validated the information, logged it, and sent emails.
 
-Then each module added another layer.
+Then each module forced a different question.
 
 **Module 2:** What happens when the workflow needs to communicate with real external systems?
 
@@ -45,11 +48,13 @@ Then each module added another layer.
 
 **Module 4:** What happens when the workflow works technically, but a normal person still cannot actually use it?
 
-That last question changed the project the most.
+**Module 5:** Can I test, document, and hand the system to someone else clearly enough that they can understand it without me standing next to them?
 
-I did not want the final version to be something that only made sense when looking at an n8n canvas.
+**Module 6:** Can I understand what the system is doing when I am not watching it — especially when something breaks?
 
-I wanted someone who knows nothing about n8n, APIs, or AI agents to be able to open a link, submit a referral, and understand what happened.
+That progression changed the project from a workflow into a system.
+
+I did not want the final version to be something that only made sense when looking at an n8n canvas. I wanted someone who knows nothing about n8n, APIs, or AI agents to be able to open a link, submit a referral, understand what happened, and trust that failures could be investigated.
 
 That became **Astoria Referrals**.
 
@@ -83,7 +88,7 @@ The goal is to use automation and AI to help **organize, triage, route, and comm
 
 ## 🚀 What I Built
 
-Astoria Referrals is a live, mobile-friendly web application connected to my n8n referral workflow.
+Astoria Referrals is a live, mobile-friendly web application connected to an organization-managed production n8n workflow.
 
 A referral partner can submit:
 
@@ -106,12 +111,15 @@ The system then:
 9. Generates internal and external communication
 10. Sends the final result back to the web application
 11. Sends the appropriate email notifications
+12. Emits sanitized operational telemetry and captures unexpected browser/server failures
 
 The user sees one of three clear outcomes:
 
 - **Ready — routed automatically**
 - **Manual review required**
 - **A visible validation or connection error**
+
+The system is intentionally designed so that **manual review is a valid business outcome, not a failure state**.
 
 ---
 
@@ -274,13 +282,17 @@ Result returned to Astoria
 Supporting systems handle different responsibilities:
 
 ```text
-Google Sheets → referral log
-HubSpot       → prospect CRM record
-Gmail         → communication
-n8n           → workflow orchestration
-Claude        → AI reasoning
-Astoria       → user experience
+Google Sheets        → referral log
+HubSpot              → prospect CRM record
+Gmail                → communication
+n8n                  → workflow orchestration
+Claude               → AI reasoning
+Astoria              → user experience
+Sentry               → browser/server error monitoring
+Lovable runtime logs → structured referral telemetry
 ```
+
+The public browser never calls n8n directly. The server-side API is the boundary that protects the production webhook, adds operational telemetry, and maps upstream failures into safe user-facing responses.
 
 ---
 
@@ -302,8 +314,6 @@ Urgency: High
 Confidence: 0.90
 ```
 
----
-
 ### 2. Extractor
 
 Answers:
@@ -322,8 +332,6 @@ Constraint: Dealership requires proof of insurance
 ```
 
 When information was not provided, the Extractor is expected to leave it missing instead of inventing it.
-
----
 
 ### 3. Reasoner
 
@@ -348,8 +356,6 @@ SLA: 4 hours
 Human Review: No
 ```
 
----
-
 ### 4. Composer
 
 Turns the validated decision into communication for:
@@ -359,8 +365,6 @@ Turns the validated decision into communication for:
 - Prospect
 
 The Composer does not get to change the routing decision or make new insurance decisions.
-
----
 
 ### Final Combiner
 
@@ -427,7 +431,7 @@ It maps the backend response into the information the referral partner actually 
 
 ## 🧪 Testing & Guardrails
 
-Before considering the live prototype ready for Demo Day, I ran a production audit across the system.
+Before considering the live prototype ready for Demo Day and production-hardening review, I ran a production audit across the system.
 
 | Test | Result |
 |---|---|
@@ -436,13 +440,17 @@ Before considering the live prototype ready for Demo Day, I ran a production aud
 | Manual review | ✅ PASS |
 | Invalid partner error | ✅ PASS |
 | Mobile usability | ✅ PASS |
-| Browser console errors | ✅ PASS |
+| Browser console | ✅ PASS |
 | Google Sheets logging | ✅ PASS |
 | HubSpot CRM | ✅ PASS |
 | Email delivery | ✅ PASS |
+| Automated Vitest suite | ✅ 5/5 PASS |
+| Browser Sentry delivery | ✅ PASS |
+| Server Sentry delivery | ✅ PASS |
+| Structured referral logging | ✅ PASS |
+| Request correlation | ✅ PASS |
 | Public GitHub | ✅ PASS |
-| README accuracy | ✅ PASS |
-| Secrets exposed | ✅ NO |
+| Privileged secrets exposed | ✅ NO |
 
 ### Happy Path
 
@@ -459,6 +467,8 @@ Submit
 → Return result
 ```
 
+A successful production verification produced both `referral.received` and `referral.completed` with the same `request_id`, a `200` status, a referral ID, processing duration, and zero fallbacks.
+
 ### Manual Review
 
 If the referral is too vague to route confidently, the system can stop and return:
@@ -469,6 +479,8 @@ Route: General Review
 ```
 
 instead of pretending to know more than it does.
+
+The manual-review production test emitted `referral.received` followed by `referral.manual_review` with the same `request_id`, confirming that human review is observable without being treated as an application error.
 
 ### Invalid Partner
 
@@ -527,10 +539,20 @@ One of the biggest lessons from building the agent team was:
 - **Google Sheets** — referral logging
 - **Gmail** — internal, partner, and prospect communication
 
-### Development
+### Observability
+
+- **Sentry** — browser and server-side error monitoring
+- **Structured JSON logs** — referral lifecycle telemetry
+- **UUID request IDs** — correlation between lifecycle logs and server error context
+- **Sentry dashboard** — error events, unresolved issues, and errors over time
+
+### Testing & Development
 
 - Git
 - GitHub
+- Vitest
+- TypeScript typechecking
+- Production build verification
 - Runtime environment variables
 - Server-side API routes
 
@@ -541,7 +563,7 @@ One of the biggest lessons from building the agent team was:
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Mr-Glucose/referral-partner-app.git
 cd referral-partner-app
 ```
 
@@ -565,9 +587,16 @@ To run the referral flow end-to-end locally, the server also needs access to:
 N8N_WEBHOOK_URL
 ```
 
-This value is private.
+This value is private and must remain server-side. It must never be committed to GitHub or exposed through a `VITE_` frontend variable.
 
-It should only exist in your local/server environment and must never be committed to GitHub or exposed through a `VITE_` frontend variable.
+For local observability, Astoria can also use:
+
+```text
+VITE_SENTRY_DSN   # browser monitoring
+SENTRY_DSN        # server-side error delivery
+```
+
+The browser-facing Sentry DSN is a public project identifier, not a privileged auth token. `SENTRY_AUTH_TOKEN` is not required for the current setup and is not committed to the repository.
 
 Start the development server:
 
@@ -586,6 +615,7 @@ referral-partner-app/
 │
 ├── README.md
 ├── .env.example
+├── .env.production
 ├── .gitignore
 ├── package.json
 │
@@ -599,7 +629,10 @@ referral-partner-app/
 │   │
 │   ├── lib/
 │   │   ├── referral.functions.ts
-│   │   └── ...
+│   │   ├── referral.functions.test.ts
+│   │   ├── sentry.ts
+│   │   ├── sentry.server.ts
+│   │   └── logger.server.ts
 │   │
 │   ├── routes/
 │   │   ├── api/
@@ -607,6 +640,7 @@ referral-partner-app/
 │   │   │       └── submit-referral.ts
 │   │   └── index.tsx
 │   │
+│   ├── router.tsx
 │   └── ...
 │
 ├── supabase/
@@ -623,13 +657,24 @@ referral-partner-app/
     └── TECHNICAL_HANDOFF.md
 ```
 
-The production n8n workflow and third-party credentials are intentionally not stored in the frontend repository.
+### Important Files
+
+- `src/routes/api/public/submit-referral.ts` — server-side boundary between the public app and n8n; handles validation, forwarding, response mapping, structured telemetry, and server-side error capture.
+- `src/lib/referral.functions.ts` — frontend service layer used to submit referrals and map API responses into application state.
+- `src/lib/referral.functions.test.ts` — automated tests covering validation, successful responses, manual review, and connection failures.
+- `src/lib/sentry.ts` — browser-side Sentry initialization and tracing.
+- `src/lib/sentry.server.ts` — server-side, edge-compatible Sentry error delivery.
+- `src/lib/logger.server.ts` — sanitized structured logging for referral lifecycle events and request correlation.
+- `.env.production` — contains only the public browser-facing Sentry DSN required by the frontend monitoring SDK.
+- `docs/TECHNICAL_HANDOFF.md` — deeper architecture, deployment, troubleshooting, integration, and extension documentation.
+
+The production n8n workflow and private third-party credentials are intentionally not stored in the frontend repository.
 
 ---
 
 ## 🔐 Security
 
-The production webhook URL is kept behind a server-side boundary.
+The production n8n webhook URL is kept behind a server-side boundary.
 
 ```text
 Browser
@@ -639,18 +684,145 @@ Browser
 N8N_WEBHOOK_URL
 ```
 
-The browser never receives the n8n webhook URL.
+The browser never receives the production n8n webhook URL.
 
-The public GitHub repository also excludes:
+Private environment files and privileged credentials are excluded from the public repository.
 
 ```text
 .env
 .env.*
 ```
 
+The intentional exception is `.env.production`, which is committed because it contains only the public browser-facing `VITE_SENTRY_DSN`. A Sentry browser DSN identifies the destination project for telemetry; it is not an administrative credential.
+
 `.env.example` contains only safe example configuration.
 
-Private credentials remain in their respective backend systems.
+Private values such as `N8N_WEBHOOK_URL`, Anthropic credentials, HubSpot credentials, Google/Gmail credentials, and other privileged runtime configuration remain in their respective backend or secret-management systems.
+
+Astoria does not use or commit a `SENTRY_AUTH_TOKEN` in the current monitoring setup.
+
+---
+
+## Observability
+
+Getting Astoria to work was one problem. Being able to understand what it is doing when I am not watching it was a different one.
+
+During testing, I ran into a real example of that gap. The public app reported that it could not reach the routing service, but the actual failure was deeper in the workflow: a Google Sheets step inside n8n had returned a `Forbidden` error.
+
+Without telemetry, finding the cause meant manually checking systems one by one.
+
+For the production-hardening phase, I added observability around the referral flow so technical failures and normal referral activity can be investigated more quickly.
+
+### Error Monitoring
+
+Astoria uses Sentry for browser and server-side error monitoring.
+
+The browser integration captures unexpected application errors and tracing information. The server-side API captures real technical failures around the n8n boundary, including:
+
+- n8n connection failures
+- upstream `5xx` responses
+- invalid or empty upstream responses
+- missing runtime configuration
+- unexpected server exceptions
+
+Expected business outcomes such as malformed user input, partner validation errors, and manual review are not treated as application crashes.
+
+Because Lovable's backend runs in an edge-style serverless environment, server errors are delivered to Sentry through an edge-compatible fetch-based path rather than relying on a Node-only Sentry transport. Telemetry failures are isolated so monitoring cannot take down the referral API itself.
+
+### Structured Referral Logs
+
+The referral API emits single-line, sanitized JSON logs for important lifecycle events:
+
+- `referral.received`
+- `referral.completed`
+- `referral.manual_review`
+- `referral.upstream_failure`
+- `referral.connection_failure`
+
+Each request receives a unique `request_id` and start timestamp. Exit events include `duration_ms` and other safe operational fields when available.
+
+Successful or manual-review events may include:
+
+```text
+request_id
+referral_id
+processing_status
+http_status
+duration_ms
+fallback_count
+```
+
+A successful referral can be traced from:
+
+```text
+referral.received
+→ referral.completed
+```
+
+using the same `request_id`.
+
+A referral that does not contain enough information can instead end with:
+
+```text
+referral.received
+→ referral.manual_review
+```
+
+Manual review is treated as a valid business outcome, not a system failure.
+
+On technical failure paths, the same safe `request_id`, status, duration, and error classification are attached to Sentry context so an error can be correlated with its structured log entry.
+
+### Monitoring Dashboard
+
+The Sentry dashboard provides a simple production-health view with:
+
+- total error events
+- unresolved issues
+- errors over time
+
+Structured backend logs provide the operational side of the picture: what happened to an individual referral, how long it took, whether it completed or required human review, and whether AI fallbacks were used.
+
+Together, these answer two different questions:
+
+> **Sentry:** Is Astoria technically breaking?
+>
+> **Structured logs:** What happened to this referral?
+
+### Privacy
+
+Observability was intentionally designed to avoid collecting referral content.
+
+Astoria does not send the following information to Sentry or structured logs:
+
+- prospect names
+- prospect email addresses
+- referral notes
+- request bodies
+- cookies or authorization headers
+- webhook URLs
+- API keys or credentials
+- email content
+
+Only operational metadata required to investigate system behavior is recorded.
+
+### Twelve-Factor Alignment
+
+The M6 hardening work also moved Astoria closer to several Twelve-Factor App principles:
+
+- **Config:** runtime configuration is supplied through environment variables or backend secret management rather than hardcoded application values.
+- **Backing services:** n8n, HubSpot, Google Sheets, Gmail, and Sentry are treated as external services connected through configuration.
+- **Logs:** application activity is emitted as structured event streams rather than stored in local files.
+- **Processes:** the public API route does not rely on local persistent state between referral requests.
+
+This is not a claim that the prototype implements every Twelve-Factor practice completely, but these principles now inform how the application is configured and operated.
+
+### Current Observability Limitations
+
+The current observability layer focuses on the Astoria web application and its server-to-n8n boundary.
+
+Detailed per-agent latency and deeper n8n node-level telemetry are still investigated through n8n execution history. Source-map uploading to Sentry is also not configured, and the current dashboard focuses on error health rather than long-term business metrics.
+
+A future production version could centralize these signals further and add alerting, service-level objectives, long-term latency metrics, and aggregated human-review/fallback rates.
 
 ---
 
@@ -763,20 +935,23 @@ Referral Submitted
 → Won / Lost
 ```
 
-### 6. Observability
+### 6. Observability Expansion
 
-Add monitoring around:
+The current version already includes browser/server error monitoring, sanitized lifecycle logs, request correlation, and a basic Sentry health dashboard.
 
-- Failed workflows
-- Agent fallback frequency
-- Human-review rate
-- API latency
-- CRM failures
-- Email failures
+Future observability work could add:
+
+- automated alerts for repeated failures
+- per-agent and per-node latency
+- aggregated human-review rate
+- agent fallback-frequency dashboards
+- CRM failure metrics
+- email delivery failure metrics
+- service-level objectives and longer-term performance trends
 
 ### 7. Automated Test Coverage
 
-Expand basic application tests into broader frontend, API, and end-to-end coverage.
+Expand the current application tests into broader frontend, API, integration, and end-to-end coverage.
 
 ---
 
@@ -810,11 +985,21 @@ Later, the questions became different:
 
 Those questions helped me understand the project as a system instead of only as a collection of working nodes.
 
-Another major lesson was that AI output needs to be treated like any other external input.
-
-The fact that a model responded successfully does not mean that the response is complete, valid, or safe to use.
+Another major lesson was that AI output needs to be treated like any other external input. The fact that a model responded successfully does not mean that the response is complete, valid, or safe to use.
 
 That is why validation, fallbacks, traceability, and human review became part of the architecture instead of afterthoughts.
+
+Module 6 added another lesson: **a system working while I am watching it is not the same as a system I can operate in production.**
+
+When the Google Sheets step failed with a `Forbidden` error, the public app only knew that the routing service had failed. I had to manually inspect n8n to discover the actual cause. That experience changed the question from:
+
+> Does Astoria work?
+
+into:
+
+> If Astoria fails while someone else is using it, can I understand what happened quickly and safely?
+
+Adding error monitoring, structured logs, request correlation, and privacy boundaries made observability part of the product rather than something I would add only after a problem happened.
 
 ---
 
@@ -840,25 +1025,32 @@ Module 4
 Live Partner-Facing Web App
         ↓
 Module 5
-Production Polish + Documentation + Demo Day
+Production Polish + Testing + Documentation + Demo Preparation
+        ↓
+Module 6
+Production Hardening + Observability
 ```
 
-What started as a webhook and a few emails became a complete referral experience connecting a user-facing application, workflow automation, CRM, communication, and a multi-agent reasoning layer.
+What started as a webhook and a few emails became a complete referral experience connecting a user-facing application, workflow automation, CRM, communication, a multi-agent reasoning layer, automated testing, and production telemetry.
 
-More importantly, I now understand much better **why each layer exists, what responsibility it owns, and where the current prototype stops.**
+More importantly, I now understand much better **why each layer exists, what responsibility it owns, how I would investigate it when something goes wrong, and where the current prototype stops.**
 
 ---
 
 ## 🎯 Key Takeaway
 
-> **The goal was never to make AI replace the person handling the referral. The goal was to make sure that person starts with better information, clearer routing, and less manual work.**
+> **Every referral should end with a clear next action.**
+
+The goal was never to make AI replace the person handling the referral. The goal was to make sure that person starts with better information, clearer routing, less manual work, and a system that knows when human review is needed.
 
 Astoria Referrals is still a prototype, but it represents the kind of system I want to keep learning how to build:
 
-**practical automation, clear responsibilities, useful AI, and humans still in control.**
+**practical automation, clear responsibilities, useful AI, observable systems, and humans still in control.**
 
 ---
 
 **Live App:** [astoria-referrals.lovable.app](https://astoria-referrals.lovable.app)
+
+**Repository:** [github.com/Mr-Glucose/referral-partner-app](https://github.com/Mr-Glucose/referral-partner-app)
 
 **Built by Arthur Dorvil as part of the Gayiti Fellowship.**
