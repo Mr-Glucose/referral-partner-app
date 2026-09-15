@@ -7,15 +7,17 @@
 // - No request-body capture. Prospect names, emails, referral notes, API
 //   keys, webhook URLs, and email content must never reach Sentry.
 // - The DSN comes from VITE_SENTRY_DSN; if it is unset, Sentry stays off.
+// - Server-side Sentry is intentionally disabled for now.
 
+import { createClientOnlyFn } from "@tanstack/react-start";
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { AnyRouter } from "@tanstack/react-router";
 
 let initialized = false;
 
-export function initSentry(router: AnyRouter): void {
+// Client-only: never runs on the server (returns undefined there).
+export const initSentry = createClientOnlyFn((router: AnyRouter): void => {
   if (initialized) return;
-  if (typeof window === "undefined") return;
 
   const dsn = import.meta.env["VITE_SENTRY_DSN"];
   if (!dsn) return; // No DSN configured — leave Sentry disabled.
@@ -30,4 +32,4 @@ export function initSentry(router: AnyRouter): void {
     sendDefaultPii: false,
     enableLogs: false,
   });
-}
+});
