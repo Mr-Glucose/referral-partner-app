@@ -33,3 +33,10 @@ export const initSentry = createClientOnlyFn((router: AnyRouter): void => {
     enableLogs: false,
   });
 });
+
+// Temporary verification helper. Sends a harmless, named test error.
+// No PII, request bodies, partner data, API keys, webhook URLs, or
+// credentials are attached. Will be removed after Sentry verification.
+export const sendSentryVerificationError = createClientOnlyFn((): void => {
+  Sentry.captureException(new Error("Astoria Sentry Verification Error"));
+});
