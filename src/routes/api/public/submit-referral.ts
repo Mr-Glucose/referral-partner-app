@@ -87,7 +87,6 @@ export const Route = createFileRoute("/api/public/submit-referral")({
           );
         }
 
-
         const text = await res.text();
         let payload: Record<string, unknown> | null = null;
         try {
@@ -104,10 +103,15 @@ export const Route = createFileRoute("/api/public/submit-referral")({
             (res.status >= 500
               ? "The routing service didn't respond as expected. Nothing was lost."
               : "The routing service couldn't accept this referral. Check the details and try again.");
+          if (res.status >= 500) {
+            captureServerException(new Error(`n8n returned HTTP ${res.status}`));
+          }
           return json({ ...upstream, message }, res.status >= 500 ? 502 : res.status);
         }
 
+
         if (payload === null) {
+          captureServerException(new Error("n8n returned empty or non-JSON success response"));
           return json(
             { message: "The routing service didn't respond as expected. Nothing was lost." },
             502,
@@ -115,6 +119,7 @@ export const Route = createFileRoute("/api/public/submit-referral")({
         }
 
         return json(payload, 200);
+
       },
     },
   },
