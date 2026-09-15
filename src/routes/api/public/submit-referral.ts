@@ -18,6 +18,8 @@ export const Route = createFileRoute("/api/public/submit-referral")({
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
+        const { captureServerException } = await import("@/lib/sentry.server");
+
         let body: Record<string, unknown>;
         try {
           body = (await request.json()) as Record<string, unknown>;
@@ -53,6 +55,7 @@ export const Route = createFileRoute("/api/public/submit-referral")({
         const webhookUrl = process.env["N8N_WEBHOOK_URL"];
         if (!webhookUrl) {
           console.error("N8N_WEBHOOK_URL is not configured");
+          captureServerException(new Error("N8N_WEBHOOK_URL is not configured"));
           return json(
             { message: "The routing service isn't configured yet. Please try again later." },
             500,
@@ -72,8 +75,9 @@ export const Route = createFileRoute("/api/public/submit-referral")({
               referral_notes,
             }),
           });
-        } catch (err) {
-          console.error("Failed to reach n8n webhook", err);
+        } catch {
+          console.error("Failed to reach n8n webhook");
+          captureServerException(new Error("Failed to reach n8n webhook"));
           return json(
             {
               message:
@@ -82,6 +86,7 @@ export const Route = createFileRoute("/api/public/submit-referral")({
             502,
           );
         }
+
 
         const text = await res.text();
         let payload: Record<string, unknown> | null = null;
