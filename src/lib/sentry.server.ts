@@ -62,13 +62,13 @@ export type CaptureResult = {
  * Only non-PII operational fields are allowed here.
  */
 export type SafeErrorContext = {
-  request_id?: string;
-  referral_id?: string;
-  processing_status?: string;
-  http_status?: number;
-  duration_ms?: number;
-  fallback_count?: number;
-  error_type?: string;
+  request_id?: string | undefined;
+  referral_id?: string | undefined;
+  processing_status?: string | undefined;
+  http_status?: number | undefined;
+  duration_ms?: number | undefined;
+  fallback_count?: number | undefined;
+  error_type?: string | undefined;
 };
 
 /**
