@@ -276,6 +276,18 @@ function ReferralPage() {
           <span className={`size-2 rounded-full ${step === 2 ? "bg-brand" : "bg-black/15"}`} />
           <span className={`size-2 rounded-full ${step === 3 ? "bg-brand" : "bg-black/15"}`} />
         </div>
+
+        {showSentryTest && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => sendSentryVerificationError()}
+              className="rounded-2xl bg-peach-soft px-4 py-2 text-[12px] font-bold text-peach ring-1 ring-inset ring-black/5"
+            >
+              Send Sentry test error
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
