@@ -78,8 +78,8 @@ function ReferralPage() {
   );
 
   const set = (key: keyof FormState) => (value: string) =>
-
     setForm((f) => ({ ...f, [key]: value }));
+
 
   function localValidate(): Record<string, string> {
     const errs: Record<string, string> = {};
