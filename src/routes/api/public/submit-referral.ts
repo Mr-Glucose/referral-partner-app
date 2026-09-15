@@ -109,7 +109,6 @@ export const Route = createFileRoute("/api/public/submit-referral")({
           return json({ ...upstream, message }, res.status >= 500 ? 502 : res.status);
         }
 
-
         if (payload === null) {
           captureServerException(new Error("n8n returned empty or non-JSON success response"));
           return json(
@@ -119,8 +118,8 @@ export const Route = createFileRoute("/api/public/submit-referral")({
         }
 
         return json(payload, 200);
-
       },
+
     },
   },
 });
