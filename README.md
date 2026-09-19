@@ -817,7 +817,7 @@ Only operational metadata needed to understand system behavior is recorded.
 
 The Module 6 hardening work reinforced several ideas from the Twelve-Factor App methodology, especially keeping configuration outside application code, treating integrations as backing services, keeping request processing stateless, and treating logs as event streams.
 
-### Current Observability Limitations
+## Current Observability Limitations
 
 The current observability layer focuses on the Astoria web application and its server-to-n8n boundary.
 
