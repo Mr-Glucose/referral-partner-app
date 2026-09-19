@@ -26,7 +26,7 @@
 11. [Running Locally](#-running-locally)
 12. [Project Structure](#-project-structure)
 13. [Security](#-security)
-14. [Observability](#observability)
+14. [Current Observability Limitations](#-Current-Observability-Limitations)
 15. [Known Limitations](#️-known-limitations)
 16. [Next Steps](#-next-steps)
 17. [What I Learned](#-what-i-learned)
@@ -816,14 +816,6 @@ Only operational metadata needed to understand system behavior is recorded.
 ### Twelve-Factor Connection
 
 The Module 6 hardening work reinforced several ideas from the Twelve-Factor App methodology, especially keeping configuration outside application code, treating integrations as backing services, keeping request processing stateless, and treating logs as event streams.
-
-### Current Limitations
-
-The current observability layer focuses on the Astoria web application and the server-to-n8n boundary.
-
-Detailed per-agent latency and deeper node-level workflow telemetry are still investigated through n8n execution history.
-
-Future production work could add automated alerting, service-level objectives, long-term latency tracking, and aggregated manual-review and fallback metrics.
 
 ### Current Observability Limitations
 
