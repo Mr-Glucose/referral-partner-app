@@ -711,13 +711,13 @@ During testing, I ran into a real example of that gap. The public app reported t
 
 Without telemetry, finding the cause meant manually checking systems one by one.
 
-For the production-hardening phase, I added observability around the referral flow so technical failures and normal referral activity can be investigated more quickly.
+For Module 6, I chose the observability hardening path and added error monitoring, structured referral logs, request correlation, and a simple production-health dashboard.
 
 ### Error Monitoring
 
 Astoria uses Sentry for browser and server-side error monitoring.
 
-The browser integration captures unexpected application errors and tracing information. The server-side API captures real technical failures around the n8n boundary, including:
+The server-side monitoring focuses on technical failures around the public referral API, including:
 
 - n8n connection failures
 - upstream `5xx` responses
@@ -725,13 +725,11 @@ The browser integration captures unexpected application errors and tracing infor
 - missing runtime configuration
 - unexpected server exceptions
 
-Expected business outcomes such as malformed user input, partner validation errors, and manual review are not treated as application crashes.
-
-Because Lovable's backend runs in an edge-style serverless environment, server errors are delivered to Sentry through an edge-compatible fetch-based path rather than relying on a Node-only Sentry transport. Telemetry failures are isolated so monitoring cannot take down the referral API itself.
+Expected business outcomes such as invalid input, partner validation errors, and manual review are not treated as application crashes.
 
 ### Structured Referral Logs
 
-The referral API emits single-line, sanitized JSON logs for important lifecycle events:
+The referral API emits sanitized structured JSON events for important referral lifecycle states:
 
 - `referral.received`
 - `referral.completed`
@@ -739,9 +737,9 @@ The referral API emits single-line, sanitized JSON logs for important lifecycle 
 - `referral.upstream_failure`
 - `referral.connection_failure`
 
-Each request receives a unique `request_id` and start timestamp. Exit events include `duration_ms` and other safe operational fields when available.
+Each request receives a unique `request_id`, allowing events belonging to the same request to be connected during an investigation.
 
-Successful or manual-review events may include:
+Operational fields may include:
 
 ```text
 request_id
@@ -750,18 +748,17 @@ processing_status
 http_status
 duration_ms
 fallback_count
+error_type
 ```
 
-A successful referral can be traced from:
+For example:
 
 ```text
 referral.received
 → referral.completed
 ```
 
-using the same `request_id`.
-
-A referral that does not contain enough information can instead end with:
+or:
 
 ```text
 referral.received
@@ -770,22 +767,33 @@ referral.received
 
 Manual review is treated as a valid business outcome, not a system failure.
 
-On technical failure paths, the same safe `request_id`, status, duration, and error classification are attached to Sentry context so an error can be correlated with its structured log entry.
-
 ### Monitoring Dashboard
 
-The Sentry dashboard provides a simple production-health view with:
+The production monitoring dashboard is available in:
 
-- total error events
-- unresolved issues
-- errors over time
+```text
+Sentry
+→ Astoria Referrals
+→ Dashboards
+→ Astoria Production Observability
+```
 
-Structured backend logs provide the operational side of the picture: what happened to an individual referral, how long it took, whether it completed or required human review, and whether AI fallbacks were used.
+The dashboard currently tracks:
 
-Together, these answer two different questions:
+| Metric | Meaning |
+|---|---|
+| **Error Events** | Total technical error events captured by Sentry |
+| **Unresolved Issues** | Error types that still require investigation |
+| **Errors Over Time** | When technical errors are occurring and whether error activity is increasing |
+
+Structured referral telemetry is available in the Lovable production runtime logs.
+
+Those logs show whether a referral was received, completed, sent to manual review, how long processing took, and whether fallbacks were used.
+
+Together, the two monitoring layers answer different questions:
 
 > **Sentry:** Is Astoria technically breaking?
->
+
 > **Structured logs:** What happened to this referral?
 
 ### Privacy
@@ -803,18 +811,19 @@ Astoria does not send the following information to Sentry or structured logs:
 - API keys or credentials
 - email content
 
-Only operational metadata required to investigate system behavior is recorded.
+Only operational metadata needed to understand system behavior is recorded.
 
-### Twelve-Factor Alignment
+### Twelve-Factor Connection
 
-The M6 hardening work also moved Astoria closer to several Twelve-Factor App principles:
+The Module 6 hardening work reinforced several ideas from the Twelve-Factor App methodology, especially keeping configuration outside application code, treating integrations as backing services, keeping request processing stateless, and treating logs as event streams.
 
-- **Config:** runtime configuration is supplied through environment variables or backend secret management rather than hardcoded application values.
-- **Backing services:** n8n, HubSpot, Google Sheets, Gmail, and Sentry are treated as external services connected through configuration.
-- **Logs:** application activity is emitted as structured event streams rather than stored in local files.
-- **Processes:** the public API route does not rely on local persistent state between referral requests.
+### Current Limitations
 
-This is not a claim that the prototype implements every Twelve-Factor practice completely, but these principles now inform how the application is configured and operated.
+The current observability layer focuses on the Astoria web application and the server-to-n8n boundary.
+
+Detailed per-agent latency and deeper node-level workflow telemetry are still investigated through n8n execution history.
+
+Future production work could add automated alerting, service-level objectives, long-term latency tracking, and aggregated manual-review and fallback metrics.
 
 ### Current Observability Limitations
 
