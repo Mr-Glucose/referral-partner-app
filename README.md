@@ -26,7 +26,7 @@
 11. [Running Locally](#-running-locally)
 12. [Project Structure](#-project-structure)
 13. [Security](#-security)
-14. [Current Observability Limitations](#-Current-Observability-Limitations)
+14. [Current Observability Limitations](#-current-observability-limitations)
 15. [Known Limitations](#️-known-limitations)
 16. [Next Steps](#-next-steps)
 17. [What I Learned](#-what-i-learned)
